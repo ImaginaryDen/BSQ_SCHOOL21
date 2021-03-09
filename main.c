@@ -6,65 +6,87 @@
 /*   By: tjamis <tjamis@student.42.fr>              +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2021/03/06 18:51:18 by tjamis            #+#    #+#             */
-/*   Updated: 2021/03/08 23:29:43 by tjamis           ###   ########.fr       */
+/*   Updated: 2021/03/09 21:54:10 by tjamis           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "bsq.h"
+#include "./includes/bsq.h"
 
-#include <stdio.h>
-void print_list(t_obstacle *list);
-
-void print_arr(t_sqr result, char *name, t_map map)
+void	print_arr(t_sqr result, char *name, t_map map)
 {
-	int i;
-	int j;
-	int file;
-	char bufer;
+	int		i;
+	int		file;
+	char	buffer[map.colum + 1];
+	char	buffer_obst[result.size + 1];
 
 	if ((file = open(name, O_RDWR)) == -1)
 		return ;
-	read(file,&bufer,1);
-	while (bufer != '\n')
-		read(file,&bufer,1);
+	read(file, &buffer, 1);
+	while (*buffer != '\n')
+		read(file, &buffer, 1);
 	i = 0;
-	j = 0;
-	while (read(file,&bufer,1))
-	{
-		if (bufer == '\n')
+	while (i < result.size)
+		buffer_obst[i++] = map.valid[FULL];
+	i = -1;
+	while (read(file, buffer, map.colum + 1))
+		if (++i > result.y - result.size && i <= result.y)
 		{
-			i = -1;
-			j++;
+			write(1, buffer, result.x - result.size + 1);
+			write(1, buffer_obst, result.size);
+			write(1, buffer + result.x + 1, map.colum - result.x);
 		}
-		if (i <= result.x && i > result.x - result.size &&
-			j <= result.y && j > result.y - result.size)
-			write(1, &map.valid[2], 1);
 		else
-			write(1, &bufer, 1);
-		//printf("x - %d y - %d\n", i, j);
-		i++;
-	}
+			write(1, buffer, map.colum + 1);
 	close(file);
 }
 
-int main(int argc, char **argv)
+void	ziroing(t_map *map, t_sqr *res)
+{
+	map->colum = 0;
+	map->file = 0;
+	map->line = 0;
+	map->valid[0] = 0;
+	map->valid[1] = 0;
+	map->valid[2] = 0;
+	res->size = 0;
+	res->x = 0;
+	res->y = 0;
+}
+
+int		solve_sqr(char *name, t_map map, t_sqr result)
+{
+	if ((map.file = open(name, O_RDWR)) == -1 ||
+		!start_finding(&map, &result))
+	{
+		error_msg("map error\n");
+		close(map.file);
+		return (0);
+	}
+	close(map.file);
+	print_arr(result, name, map);
+	return (1);
+}
+
+int		main(int argc, char **argv)
 {
 	t_map		map;
 	int			i;
 	t_sqr		result;
 
 	i = 1;
-	while(i < argc)
+	while (i < argc)
 	{
-		if ((map.file = open(argv[i], O_RDWR)) == -1 || !start_finding(&map, &result))
-		{
-			error_msg("map error\n");
-			return (0);
-		}
-		printf("m.c - %d\nm.l - %d\nm.v[0] - %c\nm.v[1] - %c\nm.v[2] - %c\n",map.colum, map.line, map.valid[0], map.valid[1], map.valid[2]);
-		printf("size - %d\n x - %d\n y - %d\n",result.size, result.x, result.y);
-		close(map.file);
-		print_arr(result, argv[i], map);
+		if (i != 1)
+			write(1, "\n", 1);
+		ziroing(&map, &result);
+		solve_sqr(argv[i], map, result);
 		i++;
+	}
+	if (argc == 1)
+	{
+		std_input();
+		ziroing(&map, &result);
+		solve_sqr("std_input", map, result);
+		close(open("std_input", O_WRONLY | O_TRUNC));
 	}
 }
